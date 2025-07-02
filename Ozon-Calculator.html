@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ozon 利润与物流计算器</title>
+    <style>
+        /* --- 全局与字体 --- */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Roboto', 'Microsoft YaHei', sans-serif;
+            background-color: #f4f7f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+
+        /* --- 计算器容器 --- */
+        .calculator-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #005bff, #0048cc);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        
+        #exchange-rate {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        main {
+            padding: 25px 30px;
+        }
+
+        /* --- 表单与输入框 --- */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #555;
+        }
+
+        .input-group input {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #005bff;
+            box-shadow: 0 0 0 3px rgba(0, 91, 255, 0.2);
+        }
+        
+        /* --- 按钮 --- */
+        .button-row {
+            grid-column: 1 / -1; /* 横跨整个网格 */
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+        
+        .btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #005bff;
+            color: white;
+        }
+        .btn-primary:hover { background-color: #0048cc; }
+        
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background-color: #5a6268; }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* --- 结果区域 --- */
+        #results-section {
+            display: none; /* 默认隐藏 */
+            margin-top: 30px;
+            border-top: 1px solid #e0e0e0;
+            padding-top: 20px;
+        }
+        
+        #results-section h2 {
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #005bff;
+        }
+
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .result-item:nth-child(even) { /* 用交替背景色区分 */
+             background-color: #f0f4f8;
+        }
+
+        .result-item .label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .result-item .value {
+            font-weight: 700;
+            font-size: 1.1em;
+            color: #005bff;
+        }
+        
+        .result-item .notes {
+            white-space: pre-wrap; /* 关键样式：让换行符生效 */
+            font-size: 0.9em;
+            line-height: 1.5;
+            color: #444;
+            background-color: #e9f2ff;
+            padding: 12px;
+            border-radius: 5px;
+            margin-top: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        details {
+            margin-top: 20px;
+        }
+        
+        summary {
+            cursor: pointer;
+            font-weight: 500;
+            color: #005bff;
+            padding: 10px;
+            border-radius: 8px;
+            transition: background-color 0.3s;
+            display: inline-block;
+        }
+        
+        summary:hover {
+            background-color: #e9f2ff;
+        }
+        
+        .secondary-results-container {
+            padding-top: 15px;
+        }
+
+        .error {
+            color: #d93025;
+            font-weight: 500;
+            text-align: center;
+            padding: 15px;
+            background-color: #fbeae9;
+            border-radius: 8px;
+            white-space: pre-wrap; /* 允许错误信息换行 */
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .form-grid, .button-row { grid-template-columns: 1fr; }
+            main { padding: 20px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="calculator-container">
+        <header>
+            <h1>Ozon 利润与物流计算器</h1>
+            <div id="exchange-rate">正在加载汇率...</div>
+        </header>
+
+        <main>
+            <form id="calculator-form">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="procurementCost">进货价 (元)</label>
+                        <input type="number" id="procurementCost" placeholder="例如: 15" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="productPrice">商品定价 (元)</label>
+                        <input type="number" id="productPrice" placeholder="例如: 89" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="productWeight">商品重量 (kg)</label>
+                        <input type="number" id="productWeight" placeholder="例如: 0.45" step="any" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="categoryCommission">类目佣金 (%)</label>
+                        <input type="number" id="categoryCommission" placeholder="例如: 8" step="any" required>
+                    </div>
+                    <div class="button-row">
+                        <button type="button" id="clear-btn" class="btn btn-secondary">清空数据</button>
+                        <button type="submit" class="btn btn-primary">开始计算</button>
+                    </div>
+                </div>
+            </form>
+
+            <div id="results-section">
+                <h2>分析结果</h2>
+                <div id="primary-results"></div>
+                <details>
+                    <summary>查看更多信息</summary>
+                    <div id="secondary-results" class="secondary-results-container"></div>
+                </details>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // ==============================================================================
+        // 1. 配置区域 - 您可以在这里轻松修改所有参数
+        // ==============================================================================
+        const HANDLING_FEE_PERCENTAGE = 0.035;
+        const LOGISTICS_LABEL_FEE = 3.00;
+        const EXCHANGE_RATE_API_URL = "https://v2.xxapi.cn/api/exchange?from=CNY&to=RUB&amount=1";
+        const FALLBACK_CNY_TO_RUB_RATE = 12.5;
+
+        // 物流数据（现在使用反引号 `` 实现多行文本，方便编辑）
+        const LOGISTICS_DATA = {
+            'UNl Standard ExtraSmall': {
+                min_price_rub: 1, max_price_rub: 1500,
+                min_weight_g: 1, max_weight_g: 500,
+                base_fee_cny: 3.0, per_gram_fee_cny: 0.035,
+                notes: `重量：1至500克（含）。
+价格：1至1500卢布（含）。
+体积和长度限制：三边之和≤90厘米，最长边≤60厘米。
+丢失赔偿根据货件的价格进行，最高赔偿金额为1500卢布。`
+            },
+            'UNl Standard Budget': {
+                min_price_rub: 1, max_price_rub: 1500,
+                min_weight_g: 501, max_weight_g: 25000,
+                base_fee_cny: 23.0, per_gram_fee_cny: 0.025,
+                notes: `重量：501至25,000克（含）。
+价格：1至1500卢布（含）。
+体积和长度限制：三边之和≤150厘米，最长边≤60厘米。
+丢失赔偿根据货件的价格进行，最高赔偿金额为1500卢布。`
+            },
+            'UNl Standard Small': {
+                min_price_rub: 1501, max_price_rub: 7000,
+                min_weight_g: 1, max_weight_g: 2000,
+                base_fee_cny: 16.0, per_gram_fee_cny: 0.035,
+                notes: `重量：1至2000克（含）。
+价格：1501至7000卢布（含）。
+体积和长度限制：三边之和≤150厘米，最长边≤60厘米。
+丢失赔偿根据货件的价格进行，最高赔偿金额为7000卢布。`
+            },
+            'UNl Standard Big': {
+                min_price_rub: 1501, max_price_rub: 7000,
+                min_weight_g: 2001, max_weight_g: 25000,
+                base_fee_cny: 36.0, per_gram_fee_cny: 0.025,
+                notes: `重量：2001至25000克（含）。
+价格：1501至7000卢布（含）。
+体积和长度限制：三边之和≤250厘米，最长边≤150厘米。
+丢失赔偿根据货件的价格进行，最高赔偿金额为7000卢布。`
+            },
+            'UNl Standard Premium Small': {
+                min_price_rub: 7001, max_price_rub: 250000,
+                min_weight_g: 1, max_weight_g: 5000,
+                base_fee_cny: 22.0, per_gram_fee_cny: 0.035,
+                notes: `重量：1至5000克（含）。
+价格：7001至250000卢布（含）。
+体积和长度限制：三边之和≤250厘米，最长边≤150厘米。
+丢失赔偿根据货件的价格进行，最高赔偿金额为250000卢布。`
+            },
+            'UNl Standard Premium Big': {
+                min_price_rub: 7001, max_price_rub: 250000,
+                min_weight_g: 5001, max_weight_g: 25000,
+                base_fee_cny: 62.0, per_gram_fee_cny: 0.028,
+                notes: `重量：5001至25,000克（含）。
+价值：7001至250000卢布（含）。
+体积和长度限制：三边之和≤310厘米，最长边≤150厘米。
+丢失赔偿根据货件的价值进行，最高赔偿金额为250000卢布。`
+            }
+        };
+
+        // ==============================================================================
+        // 2. 核心逻辑区域
+        // ==============================================================================
+
+        let cnyToRubRate = FALLBACK_CNY_TO_RUB_RATE;
+
+        function formatNumber(num) {
+            if (typeof num !== 'number' || !isFinite(num)) return num;
+            return parseFloat(num.toFixed(3));
+        }
+
+        async function fetchExchangeRate() {
+            const rateDiv = document.getElementById('exchange-rate');
+            try {
+                const response = await fetch(EXCHANGE_RATE_API_URL, { mode: 'cors' });
+                if (!response.ok) throw new Error('Network response error');
+                const data = await response.json();
+                if (data.code === 200 && data.data && data.data.rate) {
+                    cnyToRubRate = parseFloat(data.data.rate);
+                    rateDiv.textContent = `实时汇率: 1 CNY ≈ ${cnyToRubRate.toFixed(4)} RUB`;
+                } else {
+                    throw new Error(data.msg || 'API format error');
+                }
+            } catch (error) {
+                console.error("汇率获取失败:", error);
+                rateDiv.textContent = `无法获取汇率, 使用备用: 1 CNY ≈ ${cnyToRubRate} RUB`;
+            }
+        }
+
+        function determineLogisticsMethod(price_rub, weight_g) {
+            for (const name in LOGISTICS_DATA) {
+                const data = LOGISTICS_DATA[name];
+                if (price_rub >= data.min_price_rub && price_rub <= data.max_price_rub &&
+                    weight_g >= data.min_weight_g && weight_g <= data.max_weight_g) {
+                    return { name, data };
+                }
+            }
+            return null;
+        }
+
+        function calculateAllData(procurementCost, productPriceCny, productWeightKg, categoryCommissionPercent) {
+            const results = {};
+            const productWeightG = productWeightKg * 1000;
+            const productPriceRub = productPriceCny * cnyToRubRate;
+            results['卢布估价'] = productPriceRub;
+
+            const logistics = determineLogisticsMethod(productPriceRub, productWeightG);
+
+            if (!logistics) {
+                results.error = `未找到匹配的物流方式！\n请检查定价 (${formatNumber(productPriceRub)} RUB) 和重量 (${formatNumber(productWeightG)} g) 是否在任何物流方式的范围内。`;
+                return results;
+            }
+
+            results['物流方式'] = logistics.name;
+            results['尺寸与重量要求的备注'] = logistics.data.notes;
+            const logisticsCost = (logistics.data.base_fee_cny + logistics.data.per_gram_fee_cny * productWeightG) + LOGISTICS_LABEL_FEE;
+            results['物流费用'] = logisticsCost;
+            const totalCost = procurementCost + logisticsCost;
+            results['总成本'] = totalCost;
+            const handlingFee = productPriceCny * HANDLING_FEE_PERCENTAGE;
+            results['手续费(3.5%)'] = handlingFee;
+            const predictedCommission = productPriceCny * (categoryCommissionPercent / 100.0);
+            results['预测佣金'] = predictedCommission;
+            const profit = productPriceCny - totalCost - predictedCommission - handlingFee;
+            results['利润'] = profit;
+            results['采购利润率'] = (procurementCost > 0) ? (profit / procurementCost) * 100 : Infinity;
+
+            return results;
+        }
+
+        // ==============================================================================
+        // 3. 用户交互和结果显示区域
+        // ==============================================================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchExchangeRate();
+            
+            const form = document.getElementById('calculator-form');
+            const clearBtn = document.getElementById('clear-btn');
+            const resultsSection = document.getElementById('results-section');
+            const primaryResultsDiv = document.getElementById('primary-results');
+            const secondaryResultsDiv = document.getElementById('secondary-results');
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                
+                const procurementCost = parseFloat(document.getElementById('procurementCost').value);
+                const productPrice = parseFloat(document.getElementById('productPrice').value);
+                const productWeight = parseFloat(document.getElementById('productWeight').value);
+                const categoryCommission = parseFloat(document.getElementById('categoryCommission').value);
+
+                const analysis = calculateAllData(procurementCost, productPrice, productWeight, categoryCommission);
+
+                primaryResultsDiv.innerHTML = '';
+                secondaryResultsDiv.innerHTML = '';
+                resultsSection.style.display = 'block';
+
+                if (analysis.error) {
+                    primaryResultsDiv.innerHTML = `<div class="error">${analysis.error}</div>`;
+                    document.querySelector('details').style.display = 'none';
+                } else {
+                    document.querySelector('details').style.display = 'block';
+                    
+                    const marginText = isFinite(analysis.采购利润率) 
+                        ? `${formatNumber(analysis.采购利润率)} %` 
+                        : 'N/A (因进货价为0)';
+                    
+                    primaryResultsDiv.innerHTML = `
+                        <div class="result-item">
+                            <span class="label">物流方式</span>
+                            <span class="value">${analysis.物流方式}</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">物流费用</span>
+                            <span class="value">${formatNumber(analysis.物流费用)} 元</span>
+                        </div>
+                        <div class="result-item">
+                             <div class="notes">${analysis.尺寸与重量要求的备注}</div>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">卢布估价</span>
+                            <span class="value">${formatNumber(analysis.卢布估价)} RUB</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">利润</span>
+                            <span class="value">${formatNumber(analysis.利润)} 元</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">采购利润率</span>
+                            <span class="value">${marginText}</span>
+                        </div>
+                    `;
+                    
+                    secondaryResultsDiv.innerHTML = `
+                        <div class="result-item">
+                            <span class="label">总成本</span>
+                            <span class="value">${formatNumber(analysis.总成本)} 元</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">预测佣金</span>
+                            <span class="value">${formatNumber(analysis.预测佣金)} 元</span>
+                        </div>
+                        <div class="result-item">
+                            <span class="label">手续费 (3.5%)</span>
+                            <span class="value">${formatNumber(analysis['手续费(3.5%)'])} 元</span>
+                        </div>
+                    `;
+                }
+            });
+            
+            clearBtn.addEventListener('click', () => {
+                form.reset();
+                resultsSection.style.display = 'none';
+                document.querySelector('details').open = false;
+            });
+        });
+
+    </script>
+</body>
+</html>
